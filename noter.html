@@ -57,7 +57,7 @@ b&#39;secret123&#39;
 <p>But we don&#39;t have a username. Luckily, we can enumerate users at the sign in page. If I enter a wrong username:
 <img src="https://raw.githubusercontent.com/th3hat3d/th3hat3d.github.io/master/img/noterwronguser.png"></img>
 <p>But if we enter a correct username:</p>
-<img src="https://raw.githubusercontent.com/th3hat3d/th3hat3d.github.io/master/img/noterrightuser"></img>
+<img src="https://raw.githubusercontent.com/th3hat3d/th3hat3d.github.io/master/img/noterrightuser.png"></img>
 <p>There is a different message for a valid user and wrong password.</p>
 <p>We can enumerate valid users with ffuf and we find one pretty quick:</p>
 <pre><code>thehated@debian:~$ ffuf -u http://10.10.11.160:5000/login --data &quot;username=FUZZ&amp;password=Noter&quot; -H &#39;Content-Type: application/x-www-form-urlencoded&#39; -w ~/SecLists/Usernames/xato-net-10-million-usernames.txt -mr &quot;Invalid login&quot;
