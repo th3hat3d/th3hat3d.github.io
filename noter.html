@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
 <title>Noter Writeup</title>
+<link rel="stylesheet" href="https://th3hat3d.github.io/styles.css">
+<link rel="icon" href="https://th3hat3d.github.io/img/noter.webp" type="image/webp"/>
 </head>
+<body>
 <b>Recon (nmap):</b>
 <pre><code>Nmap scan report for 10.10.11.160  
 Host is up (0.016s latency).  
@@ -107,7 +110,7 @@ drwxr-xr-x    2 1002     1002         4096 May 02 23:05 files
 <p>The pdf gives us info about passwords:</p>
 <img src="https://raw.githubusercontent.com/th3hat3d/th3hat3d.github.io/master/img/noterpdf.png"></img>
 <p>Most crucially, it tells us that the password format is &quot;username@site_name!&quot;, and since blue&#39;s password was &quot;blue@Noter!&quot;, perhaps ftp_admin&#39;s password is &quot;ftp_admin@Noter!&quot;</p>
-<p>**RCE and shell as svc</p>
+<p>RCE and shell as svc</p>
 <p>We see two app backups:</p>
 <pre><code>200 PORT command successful. Consider using PASV.  
 150 Here comes the directory listing.  
@@ -269,4 +272,5 @@ bash: no job control in this shell
 root@noter:/var/lib/mysql#
 </code></pre>
 <p>We&#39;re root!</p>
+</body>
 </html>
