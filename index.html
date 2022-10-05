@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1">
+<title>thehated1's writeups (of retired machines)</title>
+<link rel="stylesheet" href="https://th3hat3d.github.io/styles.css">
+</head>
+<body>
+<h2 style="text-align:center" style="font-size: 14px">thehated1's writeups</h1>
+<h3 style="text-align:center" style="font-size: 14px">HTB and Computer Science enthusiast</h2>
+<h4 style="text-align:center" style="font-size: 18px"><a href="https://th3hat3d.github.io/noter.md">HTB - Noter Writeup</a></h4>
+<p style="text-align:center">I quite enjoyed this one. Noter centers around a web application with a weak signing key for its session cookies, which allows us to impersonate a user and access a backup of the website source code over FTP. Upon inspecting the source, we find that the web app uses a javascript library with an RCE vulnerability. Once on the box, we find out that MySQL runs as root, and is therefore vulnerable to code execution as root with a user defined function (UDF) using the raptor exploit.</p>
+</html>
