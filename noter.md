@@ -1,3 +1,7 @@
+---
+title: Document Center
+---
+
 #### HTB: Noter
 
 **Recon (nmap):**
