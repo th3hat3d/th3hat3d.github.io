@@ -1,0 +1,10 @@
+lsi: false
+safe: true
+source: th3hat3d/th3hat3d.github.io
+incremental: false
+highlighter: rouge
+gist:
+  noscript: false
+kramdown:
+  math_engine: mathjax
+  syntax_highlighter: rouge
