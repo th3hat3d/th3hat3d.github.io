@@ -1,4 +1,9 @@
-I know this isn't a writeup, but it's relevant to my Infosec journey, so I decided to include it in this blog. Recently, I started studying for the CCNA certification, hoping to get a foothold in networking. In this article, I will point out the reasons I started, the hopes I have, and what I've been doing to study. I will include my resources (so far) at the bottom, and update this article as time goes on. 
+---
+layout: post
+title: "My CCNA Journey (so far)"
+---
+
+Recently, I started studying for the CCNA certification, hoping to get a foothold in networking. In this article, I will point out the reasons I started, the hopes I have, and what I've been doing to study. I will include my resources (so far) at the bottom, and update this article as time goes on. 
 
 **Why I Started**
 
