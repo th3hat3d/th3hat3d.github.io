@@ -18,11 +18,10 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: th3hat3d's cybersec blog
+title: th3hat3d's writeups (of retired machines)
 description: >- # this means to ignore newlines until "baseurl:"
-  This is a site where I occasionally blog about anything related to cybersecurity. Most
-  prominent on here are CTF writeups and posts about my infosec journey, but anything goes,
-  really (so long as it's cybersec related).
+  This is a site where I occasionally make writeups of retired HTB machines
+  for my own learning and for others to see. Thanks for reading!
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://th3hat3d.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  th3hat3d
