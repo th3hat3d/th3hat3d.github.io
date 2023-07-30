@@ -33,13 +33,13 @@ Login failed.
 
 **Looking at the Web App**
 
-![noterlanding](https://th3hat3d.github.io/img/noterlanding.png)
+![noterlanding](https://cybersec.deadandbeef.com/images/noterlanding.png)
 
 We see that this is a note taking application, and we can register an account. 
 
 Since we can take notes, we can try XSS, but it seems like there's protection against it:
 
-![noterxss](https://th3hat3d.github.io/img/noterxss.png)
+![noterxss](https://cybersec.deadandbeef.com/images/noterxss.png)
 
 I look at my cookies, and the session cookie looks like a JWT:
 ```
@@ -73,10 +73,10 @@ b'secret123'
 ```
 
 But we don't have a username. Luckily, we can enumerate users at the sign in page. If I enter a wrong username:
-![noterwronguser](https://th3hat3d.github.io/img/noterwronguser.png)
+![noterwronguser](https://cybersec.deadandbeef.com/images/noterwronguser.png)
 
 But if we enter a correct username:
-![noterrightuser](https://th3hat3d.github.io/img/noterrightuser.png)
+![noterrightuser](https://cybersec.deadandbeef.com/images/noterrightuser.png)
 
 There is a different message for a valid user and wrong password.
 
@@ -118,11 +118,11 @@ eyJsb2dnZWRfaW4iOnRydWUsInVzZXJuYW1lIjoiYmx1ZSJ9.Yxds9g.fR2IP9wZhjGqa5LnmiegvwDG
 ```
 
 Upon changing our cookie, we get signed in as Blue:
-![noterloggedin](https://th3hat3d.github.io/img/noterloggedin.png)
+![noterloggedin](https://cybersec.deadandbeef.com/images/noterloggedin.png)
 
 Crucially, we have a note from ftp_admin:
 
-![noternote](https://th3hat3d.github.io/img/noternote.png)
+![noternote](https://cybersec.deadandbeef.com/images/noternote.png)
 
 Now we can log in to FTP.
 
@@ -139,7 +139,7 @@ drwxr-xr-x    2 1002     1002         4096 May 02 23:05 files
 The "files" directory is empty.
 
 The pdf gives us info about passwords:
-![noterpdf](https://th3hat3d.github.io/img/noterpdf.png)
+![noterpdf](https://cybersec.deadandbeef.com/images/noterpdf.png)
 
 Most crucially, it tells us that the password format is "username@site_name!", and since blue's password was "blue@Noter!", perhaps ftp_admin's password is "ftp_admin@Noter!"
 
@@ -164,7 +164,7 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 ```
 
 There is an md-to-pdf function in the backup, and we can see this on the web app too:
-![noterexport](https://th3hat3d.github.io/img/noterexport.png)
+![noterexport](https://cybersec.deadandbeef.com/images/noterexport.png)
 
 Looking for exploits in md-to-pdf, we see a poc script for CVE-2021-23639:
 ![noterpoc](https://th3hat3d.github.io/img/noterpoc.png)
