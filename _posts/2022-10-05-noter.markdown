@@ -1,4 +1,7 @@
-#### HTB: Noter
+---
+layout: post
+title: "HTB: Noter"
+---
 
 **Recon (nmap):**
 
