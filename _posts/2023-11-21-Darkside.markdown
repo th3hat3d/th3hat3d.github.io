@@ -32,7 +32,7 @@ A standard 22-80 situation. We'll go for HTTP first, of course.
 
 **the website**
 
-![[Pasted image 20231120225907.png]]
+![](https://cybersec.deadandbeef.com/images/Darkside/loginpage.png)
 
 A plain login page. Standard credentials such as admin:admin don't work on it when we test. Since there isn't much else to go off of, we do some dirbusting.
 
@@ -99,7 +99,7 @@ server-status           [Status: 403, Size: 279, Words: 20, Lines: 10]
 
 `/backup` o.o; that's always interesting. Piques our curiosity. What data could be in there?
 
-![[Pasted image 20231121172915.png]]
+![](https://cybersec.deadandbeef.com/images/Darkside/backupfolder.png)
 
 vote.txt... wonder what that could be.
 
@@ -132,18 +132,18 @@ kevin:iloveyou
 
 When we log in with our prize, we see a string of encoded text. At least, that's what it appears like:
 
-![[Pasted image 20231121182242.png]]
+![](https://cybersec.deadandbeef.com/images/Darkside/kevinpage.png)
 
 ```
 kgr6F1pR4VLAZoFnvRSX1t4GAEqbbph6yYs3ZJw1tXjxZyWCC
 ```
 
 Plugging this into CyberChef (because it simply doesn't resemble Base64 at all) and employing the magic module, we see our decoded text:
-![[Pasted image 20231121182545.png]]
+![](https://cybersec.deadandbeef.com/images/Darkside/cyberchefdecode.png)
 
 It wasn't Base64, that's for sure! Regardless, we now have a new potential path to visit on the site: `/sfqekmgncutjhbypvxda.onion`
 
-![[Pasted image 20231121182742.png]]
+![](https://cybersec.deadandbeef.com/images/Darkside/whichside.png)
 
 Obviously, we have our answer: the dark side. But where do we answer this? Let's peer inside the source:
 ```
